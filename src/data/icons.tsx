@@ -1,10 +1,14 @@
 import {
   Box,
   Boxes,
+  Brush,
   Droplets,
+  Grid3x3,
   Layers,
   Mountain,
+  Package,
   Truck,
+  Wrench,
   type LucideIcon,
 } from "lucide-react";
 import type { ItemIconKey } from "../types";
@@ -17,6 +21,10 @@ export const itemIcons: Record<ItemIconKey, LucideIcon> = {
   sand: Mountain,
   pallet: Layers,
   delivery: Truck,
+  brick: Grid3x3,
+  paint: Brush,
+  tool: Wrench,
+  box: Package,
 };
 
 // Tailwind tint classes per icon, kept soft (no neon).
@@ -27,4 +35,22 @@ export const itemIconTints: Record<ItemIconKey, string> = {
   sand: "bg-amber-50 text-amber-600",
   pallet: "bg-emerald-50 text-emerald-600",
   delivery: "bg-indigo-50 text-indigo-600",
+  brick: "bg-orange-50 text-orange-600",
+  paint: "bg-pink-50 text-pink-600",
+  tool: "bg-slate-100 text-slate-600",
+  box: "bg-blue-50 text-blue-600",
 };
+
+/** Ordered list for icon pickers. */
+export const iconOrder: ItemIconKey[] = [
+  "block",
+  "glue",
+  "cement",
+  "sand",
+  "pallet",
+  "delivery",
+  "brick",
+  "paint",
+  "tool",
+  "box",
+];

@@ -1,14 +1,14 @@
-import { Link, useNavigate } from "react-router-dom";
-import { Card } from "../components/ui/Card";
+import { Link } from "react-router-dom";
+import { Card, CardBody } from "../components/ui/Card";
 import { PageTitle } from "../components/ui/PageTitle";
-import { useAuth } from "../app/auth";
+import { useAppData } from "../context/AppDataContext";
 import {
   Wallet,
   Factory,
   Package,
   ScrollText,
   Settings,
-  LogOut,
+  Info,
   ChevronRight,
   type LucideIcon,
 } from "lucide-react";
@@ -24,18 +24,17 @@ interface MenuLink {
 const links: MenuLink[] = [
   { to: "/expenses", label: "Расходы", description: "Учет затрат", icon: Wallet, tint: "bg-red-50 text-red-600" },
   { to: "/production", label: "Производство", description: "Выпуск продукции", icon: Factory, tint: "bg-blue-50 text-brand-600" },
-  { to: "/items", label: "Товары", description: "Каталог и цены", icon: Package, tint: "bg-emerald-50 text-emerald-600" },
-  { to: "/activity", label: "Журнал", description: "История действий", icon: ScrollText, tint: "bg-amber-50 text-amber-600" },
-  { to: "/settings", label: "Настройки", description: "Компания и пользователи", icon: Settings, tint: "bg-slate-100 text-slate-600" },
+  { to: "/items", label: "Товары и материалы", description: "Каталог и цены", icon: Package, tint: "bg-emerald-50 text-emerald-600" },
+  { to: "/activity", label: "Журнал действий", description: "История операций", icon: ScrollText, tint: "bg-amber-50 text-amber-600" },
+  { to: "/settings", label: "Настройки компании", description: "Компания, сотрудники, сброс", icon: Settings, tint: "bg-slate-100 text-slate-600" },
 ];
 
 export function MorePage() {
-  const { logout } = useAuth();
-  const navigate = useNavigate();
+  const { currentBusiness } = useAppData();
 
   return (
     <div className="space-y-5">
-      <PageTitle title="Еще" subtitle="Дополнительные разделы" />
+      <PageTitle title="Еще" subtitle={currentBusiness?.name} />
 
       <Card>
         <div className="divide-y divide-slate-100">
@@ -54,15 +53,16 @@ export function MorePage() {
         </div>
       </Card>
 
-      <button
-        onClick={() => {
-          logout();
-          navigate("/login");
-        }}
-        className="flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold text-red-600 transition hover:bg-red-50"
-      >
-        <LogOut className="h-5 w-5" /> Выйти из аккаунта
-      </button>
+      <Card className="border-amber-100 bg-amber-50/60">
+        <CardBody>
+          <div className="flex gap-3">
+            <Info className="h-5 w-5 shrink-0 text-amber-600" />
+            <p className="text-sm text-amber-800">
+              Локальный режим: данные хранятся только на этом устройстве. Общий доступ появится после подключения синхронизации.
+            </p>
+          </div>
+        </CardBody>
+      </Card>
     </div>
   );
 }

@@ -3,16 +3,11 @@ import { Link } from "react-router-dom";
 import { Card, CardHeader } from "../components/ui/Card";
 import { StatCard } from "../components/ui/StatCard";
 import { ActivityItem } from "../components/business/ActivityItem";
-import {
-  activity,
-  dashboardSummary,
-  stockEntries,
-} from "../data/mockData";
-import { formatNumber, formatTenge } from "../lib/format";
+import { useAppData } from "../context/AppDataContext";
+import { formatNumber, formatTenge, isToday } from "../lib/format";
 import { itemIcons, itemIconTints } from "../data/icons";
 import {
-  CheckCircle2,
-  RefreshCw,
+  HardDrive,
   TrendingUp,
   TrendingDown,
   Wallet,
@@ -22,38 +17,24 @@ import {
 } from "lucide-react";
 
 export function DashboardPage() {
-  const { revenueToday, expensesToday, profitToday, pendingSync } = dashboardSummary;
-  const synced = pendingSync === 0;
-  const previewStock = stockEntries.slice(0, 3);
+  const { currentBusiness, activeSales, activeExpenses, activeItems, businessActivity } = useAppData();
+
+  const revenueToday = activeSales.filter((s) => isToday(s.createdAt)).reduce((sum, s) => sum + s.total, 0);
+  const expensesToday = activeExpenses.filter((e) => isToday(e.createdAt)).reduce((sum, e) => sum + e.amount, 0);
+  const profitToday = revenueToday - expensesToday;
+
+  const stockPreview = activeItems.filter((i) => i.type !== "service").slice(0, 3);
+  const recent = businessActivity.slice(0, 4);
 
   return (
     <div className="space-y-5">
-      {/* Sync status */}
-      <Card
-        className={
-          synced
-            ? "border-emerald-100 bg-emerald-50/50 p-4"
-            : "border-amber-100 bg-amber-50/60 p-4"
-        }
-      >
-        <div className="flex items-center gap-3">
-          <span
-            className={
-              "flex h-11 w-11 items-center justify-center rounded-xl " +
-              (synced ? "bg-emerald-100 text-emerald-600" : "bg-amber-100 text-amber-600")
-            }
-          >
-            {synced ? <CheckCircle2 className="h-6 w-6" /> : <RefreshCw className="h-6 w-6" />}
-          </span>
-          <div>
-            <p className="text-sm font-bold text-slate-900">
-              {synced ? "✅ Синхронизировано" : `🟡 ${pendingSync} записи ждут отправки`}
-            </p>
-            <p className="text-xs text-slate-500">
-              {synced ? "Все данные сохранены" : "Будут отправлены при подключении"}
-            </p>
-          </div>
-        </div>
+      {/* Company / local mode block */}
+      <Card className="bg-gradient-to-br from-brand-600 to-blue-700 p-5 text-white">
+        <p className="text-lg font-extrabold">{currentBusiness?.name}</p>
+        <p className="mt-0.5 flex items-center gap-1.5 text-sm text-blue-100">
+          <HardDrive className="h-4 w-4" />
+          Локальный режим · Данные на этом устройстве
+        </p>
       </Card>
 
       {/* Today figures */}
@@ -65,18 +46,18 @@ export function DashboardPage() {
           icon={<TrendingUp className="h-5 w-5" />}
         />
         <StatCard
-          label="Расходы"
+          label="Расходы сегодня"
           value={formatTenge(expensesToday)}
           accent="red"
           icon={<TrendingDown className="h-5 w-5" />}
         />
         <div className="col-span-2">
           <StatCard
-            label="Прибыль"
+            label="Прибыль сегодня"
             value={formatTenge(profitToday)}
-            accent="green"
+            accent={profitToday < 0 ? "red" : "green"}
             icon={<Wallet className="h-5 w-5" />}
-            hint="Выручка минус расходы за сегодня"
+            hint="Выручка минус расходы за сегодня · Локально сохранено"
           />
         </div>
       </div>
@@ -97,16 +78,17 @@ export function DashboardPage() {
           </Link>
         </CardHeader>
         <div className="divide-y divide-slate-100 px-4 pb-2">
-          {previewStock.map((s) => {
-            const Icon = itemIcons[s.icon];
+          {stockPreview.length === 0 && <p className="py-3 text-sm text-slate-400">Нет позиций на складе.</p>}
+          {stockPreview.map((item) => {
+            const Icon = itemIcons[item.icon];
             return (
-              <div key={s.id} className="flex items-center gap-3 py-3">
-                <span className={"flex h-10 w-10 items-center justify-center rounded-xl " + itemIconTints[s.icon]}>
+              <div key={item.id} className="flex items-center gap-3 py-3">
+                <span className={"flex h-10 w-10 items-center justify-center rounded-xl " + itemIconTints[item.icon]}>
                   <Icon className="h-5 w-5" />
                 </span>
-                <span className="flex-1 text-sm font-medium text-slate-700">{s.name}</span>
+                <span className="flex-1 text-sm font-medium text-slate-700">{item.name}</span>
                 <span className="text-sm font-bold text-slate-900 tabular">
-                  {formatNumber(s.quantity)} {s.unit}
+                  {formatNumber(item.stockQuantity)} {item.unit}
                 </span>
               </div>
             );
@@ -114,7 +96,7 @@ export function DashboardPage() {
         </div>
       </Card>
 
-      {/* Latest activity */}
+      {/* Recent activity */}
       <Card>
         <CardHeader>
           <h2 className="text-base font-bold text-slate-900">Последние действия</h2>
@@ -123,8 +105,9 @@ export function DashboardPage() {
           </Link>
         </CardHeader>
         <div className="divide-y divide-slate-100 px-4 pb-2">
-          {activity.slice(0, 3).map((log) => (
-            <ActivityItem key={log.id} log={log} />
+          {recent.length === 0 && <p className="py-3 text-sm text-slate-400">Пока нет действий.</p>}
+          {recent.map((log) => (
+            <ActivityItem key={log.id} log={log} compact />
           ))}
         </div>
       </Card>
@@ -148,9 +131,7 @@ function QuickAction({
       to={to}
       className="flex flex-col items-center gap-2 rounded-2xl border border-slate-100 bg-white p-4 shadow-card transition active:scale-[0.98]"
     >
-      <span className={"flex h-12 w-12 items-center justify-center rounded-xl text-white " + tint}>
-        {icon}
-      </span>
+      <span className={"flex h-12 w-12 items-center justify-center rounded-xl text-white " + tint}>{icon}</span>
       <span className="text-xs font-semibold text-slate-700">{label}</span>
     </Link>
   );
