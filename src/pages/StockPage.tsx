@@ -1,32 +1,57 @@
+import { useMemo } from "react";
 import { PageTitle } from "../components/ui/PageTitle";
-import { StockCard } from "../components/business/StockCard";
 import { Card } from "../components/ui/Card";
-import { stockEntries } from "../data/mockData";
-import type { StockLevel } from "../types";
-
-const counts = stockEntries.reduce(
-  (acc, s) => {
-    acc[s.level] += 1;
-    return acc;
-  },
-  { ok: 0, low: 0, out: 0 } as Record<StockLevel, number>
-);
+import { StockCard, stockLevel } from "../components/business/StockCard";
+import { useAppData } from "../context/AppDataContext";
+import { formatNumber } from "../lib/format";
 
 export function StockPage() {
+  const { activeItems, activeSales, activeProduction } = useAppData();
+
+  const counts = useMemo(() => {
+    const acc = { ok: 0, low: 0, out: 0 };
+    activeItems.forEach((i) => {
+      const lvl = stockLevel(i);
+      if (lvl) acc[lvl] += 1;
+    });
+    return acc;
+  }, [activeItems]);
+
+  // Last stock-changing action per item (most recent active sale/production).
+  const lastActivityByItem = useMemo(() => {
+    const map = new Map<string, { at: string; text: string }>();
+    const consider = (itemId: string, at: string, text: string) => {
+      const prev = map.get(itemId);
+      if (!prev || prev.at < at) map.set(itemId, { at, text });
+    };
+    activeSales.forEach((s) =>
+      consider(s.itemId, s.createdAt, `продажа −${formatNumber(s.quantity)} · ${s.createdByName}`)
+    );
+    activeProduction.forEach((p) =>
+      consider(p.itemId, p.createdAt, `производство +${formatNumber(p.quantity)} · ${p.createdByName}`)
+    );
+    return map;
+  }, [activeSales, activeProduction]);
+
   return (
     <div className="space-y-5">
-      <PageTitle title="Склад" subtitle={`${stockEntries.length} позиций`} />
+      <PageTitle title="Склад" subtitle={`${activeItems.length} позиций`} />
 
-      {/* Status summary */}
       <div className="grid grid-cols-3 gap-3">
         <Summary label="В наличии" value={counts.ok} dot="bg-emerald-500" text="text-emerald-600" />
         <Summary label="Мало" value={counts.low} dot="bg-amber-500" text="text-amber-600" />
         <Summary label="Заканчивается" value={counts.out} dot="bg-red-500" text="text-red-600" />
       </div>
 
+      {activeItems.length === 0 && (
+        <Card className="p-5 text-center text-sm text-slate-400">
+          Склад пуст. Добавьте позиции на странице «Товары».
+        </Card>
+      )}
+
       <div className="grid gap-3 sm:grid-cols-2">
-        {stockEntries.map((entry) => (
-          <StockCard key={entry.id} entry={entry} />
+        {activeItems.map((item) => (
+          <StockCard key={item.id} item={item} lastActivity={lastActivityByItem.get(item.id)?.text} />
         ))}
       </div>
     </div>

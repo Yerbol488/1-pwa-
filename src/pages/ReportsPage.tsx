@@ -1,80 +1,75 @@
+import { useMemo } from "react";
 import { Card, CardHeader } from "../components/ui/Card";
 import { StatCard } from "../components/ui/StatCard";
 import { PageTitle } from "../components/ui/PageTitle";
-import { reportSummary, weeklyBars } from "../data/mockData";
+import { useAppData } from "../context/AppDataContext";
 import { formatNumber, formatTenge } from "../lib/format";
-import { TrendingUp, TrendingDown, Wallet, Trophy } from "lucide-react";
+import { TrendingUp, TrendingDown, Wallet, ShoppingCart } from "lucide-react";
 
 export function ReportsPage() {
-  const maxValue = Math.max(...weeklyBars.map((b) => Math.max(b.revenue, b.expense)));
+  const { activeSales, activeExpenses, activeProduction } = useAppData();
+
+  const revenue = activeSales.reduce((s, x) => s + x.total, 0);
+  const expenses = activeExpenses.reduce((s, x) => s + x.amount, 0);
+  const profit = revenue - expenses;
+  const productionQty = activeProduction.reduce((s, x) => s + x.quantity, 0);
+
+  // Top items by sold quantity (active sales only).
+  const topItems = useMemo(() => {
+    const map = new Map<string, number>();
+    activeSales.forEach((s) => map.set(s.itemName, (map.get(s.itemName) ?? 0) + s.quantity));
+    return [...map.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5);
+  }, [activeSales]);
+  const maxTop = topItems.length ? topItems[0][1] : 0;
 
   return (
     <div className="space-y-5">
-      <PageTitle title="Отчеты" subtitle="За текущую неделю" />
+      <PageTitle title="Отчеты" subtitle="По всем активным записям" />
 
       <div className="grid grid-cols-2 gap-3">
-        <StatCard
-          label="Выручка за неделю"
-          value={formatTenge(reportSummary.revenueWeek)}
-          accent="blue"
-          icon={<TrendingUp className="h-5 w-5" />}
-        />
-        <StatCard
-          label="Расходы за неделю"
-          value={formatTenge(reportSummary.expenseWeek)}
-          accent="red"
-          icon={<TrendingDown className="h-5 w-5" />}
-        />
+        <StatCard label="Выручка" value={formatTenge(revenue)} accent="blue" icon={<TrendingUp className="h-5 w-5" />} />
+        <StatCard label="Расходы" value={formatTenge(expenses)} accent="red" icon={<TrendingDown className="h-5 w-5" />} />
         <StatCard
           label="Прибыль"
-          value={formatTenge(reportSummary.profitWeek)}
-          accent="green"
+          value={formatTenge(profit)}
+          accent={profit < 0 ? "red" : "green"}
           icon={<Wallet className="h-5 w-5" />}
         />
         <StatCard
-          label="Самый продаваемый"
-          value={reportSummary.topItem}
+          label="Продаж"
+          value={formatNumber(activeSales.length)}
           accent="slate"
-          icon={<Trophy className="h-5 w-5" />}
-          hint={`${formatNumber(reportSummary.topItemUnits)} шт за неделю`}
+          icon={<ShoppingCart className="h-5 w-5" />}
+          hint={`Произведено: ${formatNumber(productionQty)}`}
         />
       </div>
 
-      {/* Bar chart built from plain divs */}
       <Card>
         <CardHeader>
-          <h2 className="text-base font-bold text-slate-900">Выручка и расходы</h2>
-          <div className="flex items-center gap-3 text-xs font-medium text-slate-500">
-            <span className="flex items-center gap-1">
-              <span className="h-2.5 w-2.5 rounded-sm bg-brand-500" /> Выручка
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="h-2.5 w-2.5 rounded-sm bg-red-400" /> Расход
-            </span>
-          </div>
+          <h2 className="text-base font-bold text-slate-900">Топ товаров по продажам</h2>
         </CardHeader>
-        <div className="px-4 pb-5 pt-2">
-          <div className="flex items-end justify-between gap-2" style={{ height: 180 }}>
-            {weeklyBars.map((b) => (
-              <div key={b.label} className="flex flex-1 flex-col items-center gap-1.5">
-                <div className="flex h-full w-full items-end justify-center gap-1">
-                  <div
-                    className="w-1/2 rounded-t-md bg-brand-500 transition-all"
-                    style={{ height: `${(b.revenue / maxValue) * 100}%` }}
-                    title={formatTenge(b.revenue)}
-                  />
-                  <div
-                    className="w-1/2 rounded-t-md bg-red-400 transition-all"
-                    style={{ height: `${(b.expense / maxValue) * 100}%` }}
-                    title={formatTenge(b.expense)}
-                  />
-                </div>
-                <span className="text-[11px] font-medium text-slate-400">{b.label}</span>
+        <div className="space-y-3 px-4 pb-5 pt-1">
+          {topItems.length === 0 && <p className="text-sm text-slate-400">Пока нет продаж.</p>}
+          {topItems.map(([name, qty]) => (
+            <div key={name}>
+              <div className="mb-1 flex items-center justify-between text-sm">
+                <span className="font-medium text-slate-700">{name}</span>
+                <span className="font-bold text-slate-900 tabular">{formatNumber(qty)}</span>
               </div>
-            ))}
-          </div>
+              <div className="h-2.5 w-full overflow-hidden rounded-full bg-slate-100">
+                <div
+                  className="h-full rounded-full bg-brand-500"
+                  style={{ width: `${maxTop ? (qty / maxTop) * 100 : 0}%` }}
+                />
+              </div>
+            </div>
+          ))}
         </div>
       </Card>
+
+      <p className="px-1 text-xs text-slate-400">
+        Отмененные записи не учитываются в суммах. Данные хранятся локально на этом устройстве.
+      </p>
     </div>
   );
 }

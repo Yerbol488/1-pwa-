@@ -1,53 +1,63 @@
+import { useMemo, useState } from "react";
 import { Card } from "../components/ui/Card";
-import { Badge } from "../components/ui/Badge";
 import { PageTitle } from "../components/ui/PageTitle";
-import { activity } from "../data/mockData";
-import { ShoppingCart, Wallet, Factory, Boxes, type LucideIcon } from "lucide-react";
-import type { ActivityKind } from "../types";
+import { ActivityItem } from "../components/business/ActivityItem";
+import { useAppData } from "../context/AppDataContext";
+import { cn } from "../lib/format";
+import type { EntityType } from "../types";
 
-const kindIcon: Record<ActivityKind, LucideIcon> = {
-  sale: ShoppingCart,
-  expense: Wallet,
-  production: Factory,
-  stock: Boxes,
-};
+type Filter = "all" | "sale" | "expense" | "production" | "item" | "system";
 
-const kindTint: Record<ActivityKind, string> = {
-  sale: "bg-emerald-50 text-emerald-600",
-  expense: "bg-red-50 text-red-600",
-  production: "bg-blue-50 text-brand-600",
-  stock: "bg-amber-50 text-amber-600",
-};
+const filters: Array<{ key: Filter; label: string; entities: EntityType[] }> = [
+  { key: "all", label: "Все", entities: [] },
+  { key: "sale", label: "Продажи", entities: ["sale"] },
+  { key: "expense", label: "Расходы", entities: ["expense"] },
+  { key: "production", label: "Производство", entities: ["production"] },
+  { key: "item", label: "Товары", entities: ["item"] },
+  { key: "system", label: "Система", entities: ["company", "system"] },
+];
 
 export function ActivityPage() {
+  const { businessActivity } = useAppData();
+  const [filter, setFilter] = useState<Filter>("all");
+
+  const visible = useMemo(() => {
+    const def = filters.find((f) => f.key === filter)!;
+    if (def.entities.length === 0) return businessActivity;
+    return businessActivity.filter((a) => def.entities.includes(a.entityType));
+  }, [businessActivity, filter]);
+
   return (
     <div className="space-y-5">
-      <PageTitle title="Журнал" subtitle="Все действия сотрудников" />
+      <PageTitle title="Журнал" subtitle="История всех действий" />
 
-      <div className="space-y-3">
-        {activity.map((log) => {
-          const Icon = kindIcon[log.kind];
-          return (
-            <Card key={log.id} className="p-4">
-              <div className="flex items-start gap-3">
-                <span className={"flex h-11 w-11 shrink-0 items-center justify-center rounded-xl " + kindTint[log.kind]}>
-                  <Icon className="h-5 w-5" />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="font-bold text-slate-900">{log.user}</p>
-                    <span className="text-xs font-medium text-slate-400 tabular">{log.time}</span>
-                  </div>
-                  <p className="text-sm text-slate-600">{log.description}</p>
-                  <div className="mt-2">
-                    <Badge tone="slate">{log.action}</Badge>
-                  </div>
-                </div>
-              </div>
-            </Card>
-          );
-        })}
+      {/* Filters */}
+      <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 no-scrollbar">
+        {filters.map((f) => (
+          <button
+            key={f.key}
+            onClick={() => setFilter(f.key)}
+            className={cn(
+              "shrink-0 rounded-full px-3.5 py-2 text-sm font-semibold transition",
+              filter === f.key ? "bg-brand-600 text-white" : "bg-white text-slate-500 shadow-card"
+            )}
+          >
+            {f.label}
+          </button>
+        ))}
       </div>
+
+      {visible.length === 0 ? (
+        <Card className="p-5 text-center text-sm text-slate-400">Нет событий в этой категории.</Card>
+      ) : (
+        <Card>
+          <div className="divide-y divide-slate-100 px-4">
+            {visible.map((log) => (
+              <ActivityItem key={log.id} log={log} />
+            ))}
+          </div>
+        </Card>
+      )}
     </div>
   );
 }

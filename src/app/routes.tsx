@@ -1,7 +1,7 @@
 import { Navigate, Route, Routes } from "react-router-dom";
-import { useAuth } from "./auth";
+import { useAppData } from "../context/AppDataContext";
 import { AppLayout } from "../components/layout/AppLayout";
-import { LoginPage } from "../pages/LoginPage";
+import { CompanySetupPage } from "../pages/CompanySetupPage";
 import { DashboardPage } from "../pages/DashboardPage";
 import { SalesPage } from "../pages/SalesPage";
 import { ExpensesPage } from "../pages/ExpensesPage";
@@ -12,24 +12,19 @@ import { ReportsPage } from "../pages/ReportsPage";
 import { ActivityPage } from "../pages/ActivityPage";
 import { SettingsPage } from "../pages/SettingsPage";
 import { MorePage } from "../pages/MorePage";
-import type { ReactNode } from "react";
-
-function RequireAuth({ children }: { children: ReactNode }) {
-  const { isAuthenticated } = useAuth();
-  return isAuthenticated ? <>{children}</> : <Navigate to="/login" replace />;
-}
 
 export function AppRoutes() {
+  const { currentBusinessId } = useAppData();
+
+  // State-driven gate: before company setup, ONLY the setup screen renders —
+  // no routed pages, no header, no bottom navigation.
+  if (!currentBusinessId) {
+    return <CompanySetupPage />;
+  }
+
   return (
     <Routes>
-      <Route path="/login" element={<LoginPage />} />
-      <Route
-        element={
-          <RequireAuth>
-            <AppLayout />
-          </RequireAuth>
-        }
-      >
+      <Route element={<AppLayout />}>
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/sales" element={<SalesPage />} />
         <Route path="/expenses" element={<ExpensesPage />} />
@@ -41,7 +36,7 @@ export function AppRoutes() {
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/more" element={<MorePage />} />
       </Route>
-      <Route path="*" element={<Navigate to="/login" replace />} />
+      <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
   );
 }

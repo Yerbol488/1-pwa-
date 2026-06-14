@@ -1,8 +1,9 @@
 import { Outlet, useLocation } from "react-router-dom";
 import { Header } from "./Header";
 import { BottomNav } from "./BottomNav";
+import { Toast } from "../ui/Toast";
 
-// Page titles keyed by route prefix for the header.
+// Page titles keyed by route for the header.
 const titles: Record<string, string> = {
   "/dashboard": "Главная",
   "/sales": "Продажи",
@@ -27,6 +28,7 @@ export function AppLayout() {
         <Outlet />
       </main>
       <BottomNav />
+      <Toast />
     </div>
   );
 }
