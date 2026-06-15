@@ -4,7 +4,6 @@ import { cn } from "../../lib/format";
 interface CardProps {
   children: ReactNode;
   className?: string;
-  /** Optional click handler turns the card into a button-like surface. */
   onClick?: () => void;
 }
 
@@ -23,19 +22,12 @@ export function Card({ children, className, onClick }: CardProps) {
   );
 }
 
-interface CardSectionProps {
-  children: ReactNode;
-  className?: string;
-}
-
-export function CardBody({ children, className }: CardSectionProps) {
+export function CardBody({ children, className }: { children: ReactNode; className?: string }) {
   return <div className={cn("p-4", className)}>{children}</div>;
 }
 
-export function CardHeader({ children, className }: CardSectionProps) {
+export function CardHeader({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <div className={cn("px-4 pt-4 pb-2 flex items-center justify-between", className)}>
-      {children}
-    </div>
+    <div className={cn("px-4 pt-4 pb-2 flex items-center justify-between", className)}>{children}</div>
   );
 }

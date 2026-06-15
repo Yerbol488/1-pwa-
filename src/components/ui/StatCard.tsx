@@ -4,14 +4,6 @@ import { cn } from "../../lib/format";
 
 type Accent = "blue" | "green" | "red" | "slate";
 
-interface StatCardProps {
-  label: string;
-  value: string;
-  icon?: ReactNode;
-  accent?: Accent;
-  hint?: string;
-}
-
 const accentText: Record<Accent, string> = {
   blue: "text-brand-600",
   green: "text-emerald-600",
@@ -26,7 +18,19 @@ const accentBg: Record<Accent, string> = {
   slate: "bg-slate-100 text-slate-600",
 };
 
-export function StatCard({ label, value, icon, accent = "slate", hint }: StatCardProps) {
+export function StatCard({
+  label,
+  value,
+  icon,
+  accent = "slate",
+  hint,
+}: {
+  label: string;
+  value: string;
+  icon?: ReactNode;
+  accent?: Accent;
+  hint?: string;
+}) {
   return (
     <Card className="p-4">
       <div className="flex items-start justify-between">

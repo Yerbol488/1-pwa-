@@ -1,16 +1,19 @@
 import type { ReactNode } from "react";
 import { X } from "lucide-react";
 
-interface ModalProps {
+export function Modal({
+  open,
+  title,
+  onClose,
+  children,
+  footer,
+}: {
   open: boolean;
   title: string;
   onClose: () => void;
   children: ReactNode;
-  /** Optional footer area (buttons). */
   footer?: ReactNode;
-}
-
-export function Modal({ open, title, onClose, children, footer }: ModalProps) {
+}) {
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">

@@ -1,6 +1,5 @@
-// Demo seed data. Used ONLY to initialise a freshly created company (and the
-// "reset demo data" action). After seeding, the live UI renders from the
-// localStorage-backed app state, never from this file.
+// Demo seed data. Used ONLY when the user explicitly chooses "Загрузить
+// демо-данные" (or resets to demo). Normal company setup starts EMPTY.
 
 import type {
   ActivityLog,
@@ -9,15 +8,14 @@ import type {
   ItemAttribute,
   ItemIconKey,
   ItemType,
-  ItemTypeLabel,
+  Supplier,
 } from "../types";
 import { nowIso, uid } from "../lib/storage";
+import { defaultFlagsForType, typeLabelFor } from "../lib/items";
 
-/** A reusable catalog template (also powers the "Популярные шаблоны" section). */
 export interface ItemTemplate {
   name: string;
   type: ItemType;
-  typeLabel: ItemTypeLabel;
   unit: string;
   salePrice: number;
   purchasePrice: number;
@@ -27,41 +25,27 @@ export interface ItemTemplate {
   attributes: Array<{ key: string; value: string }>;
 }
 
-export const itemTemplates: ItemTemplate[] = [
+const demoTemplates: ItemTemplate[] = [
   {
     name: "Газоблок",
     type: "product",
-    typeLabel: "Товар",
     unit: "шт",
-    salePrice: 480,
-    purchasePrice: 360,
+    salePrice: 500,
+    purchasePrice: 0,
     stockQuantity: 4820,
     icon: "block",
-    comment: "Основной товар собственного производства",
+    comment: "Готовая продукция собственного производства",
     attributes: [
       { key: "Размер", value: "600×300×200" },
       { key: "Плотность", value: "D500" },
     ],
   },
   {
-    name: "Клей",
-    type: "product",
-    typeLabel: "Товар",
-    unit: "мешок",
-    salePrice: 2300,
-    purchasePrice: 1750,
-    stockQuantity: 136,
-    icon: "glue",
-    comment: "Монтажный клей для блоков",
-    attributes: [{ key: "Вес мешка", value: "25 кг" }],
-  },
-  {
     name: "Цемент",
     type: "material",
-    typeLabel: "Материал",
     unit: "мешок",
-    salePrice: 2100,
-    purchasePrice: 1600,
+    salePrice: 0,
+    purchasePrice: 2000,
     stockQuantity: 40,
     icon: "cement",
     comment: "Используется в производстве",
@@ -70,9 +54,8 @@ export const itemTemplates: ItemTemplate[] = [
   {
     name: "Песок",
     type: "material",
-    typeLabel: "Материал",
     unit: "тонна",
-    salePrice: 9000,
+    salePrice: 0,
     purchasePrice: 6500,
     stockQuantity: 18,
     icon: "sand",
@@ -80,70 +63,50 @@ export const itemTemplates: ItemTemplate[] = [
     attributes: [],
   },
   {
-    name: "Поддоны",
-    type: "material",
-    typeLabel: "Материал",
-    unit: "шт",
-    salePrice: 3500,
-    purchasePrice: 2400,
-    stockQuantity: 60,
-    icon: "pallet",
-    comment: "",
-    attributes: [],
-  },
-  {
     name: "Доставка",
     type: "service",
-    typeLabel: "Услуга",
     unit: "рейс",
     salePrice: 15000,
-    purchasePrice: 9000,
+    purchasePrice: 0,
     stockQuantity: 0,
     icon: "delivery",
-    comment: "Доставка по городу до 5 тонн",
+    comment: "Доставка по городу",
     attributes: [],
   },
-];
-
-/** Suggested expense categories for the expense form. */
-export const expenseCategories = [
-  "Цемент",
-  "Песок",
-  "Топливо",
-  "Зарплата",
-  "Ремонт",
-  "Доставка",
-  "Электричество",
-  "Прочее",
 ];
 
 /** Payment options for the sale form. */
 export const paymentTypes = ["Наличные", "Карта", "Перевод", "В долг"] as const;
 
-/** Convert a template into a persisted Item for the given company + user. */
-export function itemFromTemplate(
-  template: ItemTemplate,
-  businessId: string,
-  user: CurrentUser
-): Item {
+/** Suggested categories for fixed (recurring) expenses. */
+export const fixedExpenseCategories = [
+  "Зарплата",
+  "Аренда",
+  "Интернет",
+  "Электричество",
+  "Налоги",
+  "Кредит",
+  "Охрана",
+  "Бухгалтерия",
+  "Прочее",
+];
+
+function itemFromTemplate(t: ItemTemplate, businessId: string, user: CurrentUser): Item {
   const ts = nowIso();
-  const attributes: ItemAttribute[] = template.attributes.map((a) => ({
-    id: uid("attr"),
-    key: a.key,
-    value: a.value,
-  }));
+  const attributes: ItemAttribute[] = t.attributes.map((a) => ({ id: uid("attr"), key: a.key, value: a.value }));
   return {
+    ...defaultFlagsForType(t.type),
     id: uid("itm"),
     businessId,
-    name: template.name,
-    type: template.type,
-    typeLabel: template.typeLabel,
-    unit: template.unit,
-    salePrice: template.salePrice,
-    purchasePrice: template.purchasePrice,
-    stockQuantity: template.stockQuantity,
-    icon: template.icon,
-    comment: template.comment,
+    name: t.name,
+    type: t.type,
+    typeLabel: typeLabelFor(t.type),
+    unit: t.unit,
+    salePrice: t.salePrice,
+    purchasePrice: t.purchasePrice,
+    stockQuantity: t.stockQuantity,
+    icon: t.icon,
+    comment: t.comment,
     attributes,
     status: "active",
     createdByUserId: user.id,
@@ -156,48 +119,71 @@ export function itemFromTemplate(
 
 export interface SeedResult {
   items: Item[];
+  suppliers: Supplier[];
   activity: ActivityLog[];
 }
 
-/**
- * Build the initial demo dataset for a new company: the six catalog items plus
- * activity entries (company created + one per seeded item). Sales / expenses /
- * production start empty so the owner begins with a clean, consistent ledger.
- */
-export function buildSeedData(
-  businessId: string,
-  businessName: string,
-  user: CurrentUser
-): SeedResult {
-  const items = itemTemplates.map((t) => itemFromTemplate(t, businessId, user));
+/** Build a demo dataset (catalog + one supplier + activity) for a company. */
+export function buildDemoData(businessId: string, user: CurrentUser): SeedResult {
+  const items = demoTemplates.map((t) => itemFromTemplate(t, businessId, user));
 
-  const activity: ActivityLog[] = [];
-  activity.push({
-    id: uid("act"),
+  const ts = nowIso();
+  const supplier: Supplier = {
+    id: uid("sup"),
     businessId,
-    userId: user.id,
-    userName: user.name,
-    actionType: "company_created",
-    entityType: "company",
-    entityId: businessId,
-    description: `${user.name} создал компанию: ${businessName}`,
-    createdAt: nowIso(),
+    name: "ТОО СтройМатериал",
+    contactPerson: "Асхат",
+    whatsappNumber: "+7 777 123 45 67",
+    phoneNumber: "+7 777 123 45 67",
+    sellsText: "цемент, песок, клей",
+    comment: "",
+    supplierStatus: "Активный",
+    status: "active",
+    createdByUserId: user.id,
+    createdByName: user.name,
+    createdAt: ts,
+    updatedAt: ts,
     syncStatus: "local",
-  });
-  items.forEach((item) => {
-    activity.push({
+  };
+
+  const activity: ActivityLog[] = [
+    {
       id: uid("act"),
       businessId,
       userId: user.id,
       userName: user.name,
-      actionType: "item_created",
-      entityType: "item",
+      actionType: "demo_data_loaded",
+      entityType: "system",
+      entityId: businessId,
+      description: `${user.name} загрузил демо-данные`,
+      createdAt: nowIso(),
+      syncStatus: "local",
+    },
+    ...items.map((item) => ({
+      id: uid("act"),
+      businessId,
+      userId: user.id,
+      userName: user.name,
+      actionType: "item_created" as const,
+      entityType: "item" as const,
       entityId: item.id,
       description: `${user.name} добавил позицию: ${item.name}`,
       createdAt: nowIso(),
+      syncStatus: "local" as const,
+    })),
+    {
+      id: uid("act"),
+      businessId,
+      userId: user.id,
+      userName: user.name,
+      actionType: "supplier_created",
+      entityType: "supplier",
+      entityId: supplier.id,
+      description: `${user.name} добавил поставщика: ${supplier.name}`,
+      createdAt: nowIso(),
       syncStatus: "local",
-    });
-  });
+    },
+  ];
 
-  return { items, activity };
+  return { items, suppliers: [supplier], activity };
 }
