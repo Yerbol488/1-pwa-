@@ -1,9 +1,8 @@
-// Central role/permission helpers. Stage 2 permissions are UI-level only;
+// Central role/permission helpers. Stage 3 permissions are UI-level only;
 // a future Supabase backend will enforce the real rules via RLS policies.
 
 import type { Membership, Role } from "../types";
 
-/** Resolve the current user's role within the active company. */
 export function getCurrentRole(
   memberships: Membership[],
   userId: string | null,
@@ -16,33 +15,14 @@ export function getCurrentRole(
   return m ? m.role : null;
 }
 
-export function canInviteMembers(role: Role | null): boolean {
-  return role === "owner" || role === "admin";
-}
+export const canInviteMembers = (r: Role | null) => r === "owner" || r === "admin";
+export const canManageItems = (r: Role | null) => r === "owner" || r === "admin";
+export const canManageSuppliers = (r: Role | null) => r === "owner" || r === "admin";
+export const canCancelRecords = (r: Role | null) => r === "owner" || r === "admin";
+export const canCreateRecords = (r: Role | null) => r === "owner" || r === "admin" || r === "member";
+export const canResetCompanyData = (r: Role | null) => r === "owner";
+export const canChangeCompanySettings = (r: Role | null) => r === "owner";
 
-export function canResetCompanyData(role: Role | null): boolean {
-  return role === "owner";
-}
-
-export function canManageItems(role: Role | null): boolean {
-  return role === "owner" || role === "admin";
-}
-
-/** Create sales/expenses/production — everyone with a role can. */
-export function canCreateRecords(role: Role | null): boolean {
-  return role === "owner" || role === "admin" || role === "member";
-}
-
-/** Cancel/soft-delete accounting records. */
-export function canCancelRecords(role: Role | null): boolean {
-  return role === "owner" || role === "admin";
-}
-
-export function canChangeCompanySettings(role: Role | null): boolean {
-  return role === "owner";
-}
-
-/** Russian label for a role. */
 export function roleLabel(role: Role | null): string {
   switch (role) {
     case "owner":

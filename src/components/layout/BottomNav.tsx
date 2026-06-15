@@ -2,13 +2,7 @@ import { NavLink } from "react-router-dom";
 import { Home, ShoppingCart, Boxes, BarChart3, Menu, type LucideIcon } from "lucide-react";
 import { cn } from "../../lib/format";
 
-interface NavItem {
-  to: string;
-  label: string;
-  icon: LucideIcon;
-}
-
-const items: NavItem[] = [
+const items: Array<{ to: string; label: string; icon: LucideIcon }> = [
   { to: "/dashboard", label: "Главная", icon: Home },
   { to: "/sales", label: "Продажи", icon: ShoppingCart },
   { to: "/stock", label: "Склад", icon: Boxes },

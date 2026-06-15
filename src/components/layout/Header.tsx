@@ -1,11 +1,7 @@
 import { HardDrive } from "lucide-react";
 import { useAppData } from "../../context/AppDataContext";
 
-interface HeaderProps {
-  title: string;
-}
-
-export function Header({ title }: HeaderProps) {
+export function Header({ title }: { title: string }) {
   const { currentBusiness } = useAppData();
   return (
     <header className="sticky top-0 z-20 border-b border-slate-100 bg-white/80 backdrop-blur">

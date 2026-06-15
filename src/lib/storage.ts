@@ -1,17 +1,23 @@
-// Single place that talks to localStorage.
-// Pages and the context never touch window.localStorage directly — they go
-// through these helpers, so the persistence format stays in one file.
+// Single place that talks to localStorage. Pages and the context never touch
+// window.localStorage directly — they go through these helpers.
 
 import type {
   ActivityLog,
   Business,
+  Client,
   CurrentUser,
-  Expense,
+  FixedExpense,
   Item,
   Membership,
+  OneOffExpense,
   Production,
   Sale,
+  StockMovement,
+  StockPurchase,
+  Supplier,
 } from "../types";
+
+export const STORAGE_VERSION = 4;
 
 export const STORAGE_KEYS = {
   businesses: "materialFlow.businesses",
@@ -20,12 +26,21 @@ export const STORAGE_KEYS = {
   memberships: "materialFlow.memberships",
   items: "materialFlow.items",
   sales: "materialFlow.sales",
-  expenses: "materialFlow.expenses",
+  stockPurchases: "materialFlow.stockPurchases",
+  oneOffExpenses: "materialFlow.oneOffExpenses",
+  fixedExpenses: "materialFlow.fixedExpenses",
   production: "materialFlow.production",
+  suppliers: "materialFlow.suppliers",
+  clients: "materialFlow.clients",
+  stockMovements: "materialFlow.stockMovements",
   activity: "materialFlow.activity",
+  pinHash: "materialFlow.pinHash",
+  storageVersion: "materialFlow.storageVersion",
 } as const;
 
-/** Read + JSON.parse a value, returning fallback on any error. */
+/** Legacy Stage 2 key (single expenses array) — read only, for migration. */
+export const LEGACY_EXPENSES_KEY = "materialFlow.expenses";
+
 export function loadJSON<T>(key: string, fallback: T): T {
   try {
     const raw = window.localStorage.getItem(key);
@@ -36,16 +51,14 @@ export function loadJSON<T>(key: string, fallback: T): T {
   }
 }
 
-/** JSON.stringify + write a value. */
 export function saveJSON<T>(key: string, value: T): void {
   try {
     window.localStorage.setItem(key, JSON.stringify(value));
   } catch {
-    // Storage full / unavailable — ignore in this local MVP.
+    /* storage full / unavailable — ignore in local MVP */
   }
 }
 
-/** Read a plain string value (used for currentBusinessId). */
 export function loadString(key: string): string | null {
   try {
     return window.localStorage.getItem(key);
@@ -59,51 +72,42 @@ export function saveString(key: string, value: string | null): void {
     if (value === null) window.localStorage.removeItem(key);
     else window.localStorage.setItem(key, value);
   } catch {
-    // ignore
+    /* ignore */
   }
 }
 
-/** Remove every Material Flow key (used by "reset demo data"). */
+export function removeKey(key: string): void {
+  try {
+    window.localStorage.removeItem(key);
+  } catch {
+    /* ignore */
+  }
+}
+
+/** Remove every Material Flow business-data key (keeps nothing). */
 export function clearAllStorage(): void {
-  Object.values(STORAGE_KEYS).forEach((key) => {
-    try {
-      window.localStorage.removeItem(key);
-    } catch {
-      // ignore
-    }
-  });
+  Object.values(STORAGE_KEYS).forEach(removeKey);
+  removeKey(LEGACY_EXPENSES_KEY);
 }
 
 // --- Typed convenience loaders ----------------------------------------------
 
-export function loadBusinesses(): Business[] {
-  return loadJSON<Business[]>(STORAGE_KEYS.businesses, []);
-}
-export function loadCurrentUser(): CurrentUser | null {
-  return loadJSON<CurrentUser | null>(STORAGE_KEYS.currentUser, null);
-}
-export function loadMemberships(): Membership[] {
-  return loadJSON<Membership[]>(STORAGE_KEYS.memberships, []);
-}
-export function loadItems(): Item[] {
-  return loadJSON<Item[]>(STORAGE_KEYS.items, []);
-}
-export function loadSales(): Sale[] {
-  return loadJSON<Sale[]>(STORAGE_KEYS.sales, []);
-}
-export function loadExpenses(): Expense[] {
-  return loadJSON<Expense[]>(STORAGE_KEYS.expenses, []);
-}
-export function loadProduction(): Production[] {
-  return loadJSON<Production[]>(STORAGE_KEYS.production, []);
-}
-export function loadActivity(): ActivityLog[] {
-  return loadJSON<ActivityLog[]>(STORAGE_KEYS.activity, []);
-}
+export const loadBusinesses = () => loadJSON<Business[]>(STORAGE_KEYS.businesses, []);
+export const loadCurrentUser = () => loadJSON<CurrentUser | null>(STORAGE_KEYS.currentUser, null);
+export const loadMemberships = () => loadJSON<Membership[]>(STORAGE_KEYS.memberships, []);
+export const loadItems = () => loadJSON<Item[]>(STORAGE_KEYS.items, []);
+export const loadSales = () => loadJSON<Sale[]>(STORAGE_KEYS.sales, []);
+export const loadStockPurchases = () => loadJSON<StockPurchase[]>(STORAGE_KEYS.stockPurchases, []);
+export const loadOneOffExpenses = () => loadJSON<OneOffExpense[]>(STORAGE_KEYS.oneOffExpenses, []);
+export const loadFixedExpenses = () => loadJSON<FixedExpense[]>(STORAGE_KEYS.fixedExpenses, []);
+export const loadProduction = () => loadJSON<Production[]>(STORAGE_KEYS.production, []);
+export const loadSuppliers = () => loadJSON<Supplier[]>(STORAGE_KEYS.suppliers, []);
+export const loadClients = () => loadJSON<Client[]>(STORAGE_KEYS.clients, []);
+export const loadStockMovements = () => loadJSON<StockMovement[]>(STORAGE_KEYS.stockMovements, []);
+export const loadActivity = () => loadJSON<ActivityLog[]>(STORAGE_KEYS.activity, []);
 
 // --- ID + time helpers ------------------------------------------------------
 
-/** Short unique id, good enough for a local single-device MVP. */
 export function uid(prefix = "id"): string {
   const rand = Math.random().toString(36).slice(2, 8);
   return `${prefix}_${Date.now().toString(36)}${rand}`;

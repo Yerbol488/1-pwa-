@@ -3,12 +3,6 @@ import { cn } from "../../lib/format";
 
 type Tone = "blue" | "green" | "amber" | "red" | "slate";
 
-interface BadgeProps {
-  children: ReactNode;
-  tone?: Tone;
-  className?: string;
-}
-
 const tones: Record<Tone, string> = {
   blue: "bg-blue-50 text-blue-700",
   green: "bg-emerald-50 text-emerald-700",
@@ -17,7 +11,15 @@ const tones: Record<Tone, string> = {
   slate: "bg-slate-100 text-slate-600",
 };
 
-export function Badge({ children, tone = "slate", className }: BadgeProps) {
+export function Badge({
+  children,
+  tone = "slate",
+  className,
+}: {
+  children: ReactNode;
+  tone?: Tone;
+  className?: string;
+}) {
   return (
     <span
       className={cn(

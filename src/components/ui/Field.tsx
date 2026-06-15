@@ -1,13 +1,14 @@
 import type { ReactNode } from "react";
 
-interface FieldProps {
+export function Field({
+  label,
+  hint,
+  children,
+}: {
   label: string;
   hint?: string;
   children: ReactNode;
-}
-
-/** Label + control wrapper used by all forms. Inputs use the `.form-input` class. */
-export function Field({ label, hint, children }: FieldProps) {
+}) {
   return (
     <label className="block">
       <span className="mb-1.5 block text-sm font-medium text-slate-600">{label}</span>

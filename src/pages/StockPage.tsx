@@ -3,39 +3,21 @@ import { PageTitle } from "../components/ui/PageTitle";
 import { Card } from "../components/ui/Card";
 import { StockCard, stockLevel } from "../components/business/StockCard";
 import { useAppData } from "../context/AppDataContext";
-import { formatNumber } from "../lib/format";
 
 export function StockPage() {
-  const { activeItems, activeSales, activeProduction } = useAppData();
+  const { stockItems, movementsForItem } = useAppData();
 
   const counts = useMemo(() => {
     const acc = { ok: 0, low: 0, out: 0 };
-    activeItems.forEach((i) => {
-      const lvl = stockLevel(i);
-      if (lvl) acc[lvl] += 1;
+    stockItems.forEach((i) => {
+      acc[stockLevel(i)] += 1;
     });
     return acc;
-  }, [activeItems]);
-
-  // Last stock-changing action per item (most recent active sale/production).
-  const lastActivityByItem = useMemo(() => {
-    const map = new Map<string, { at: string; text: string }>();
-    const consider = (itemId: string, at: string, text: string) => {
-      const prev = map.get(itemId);
-      if (!prev || prev.at < at) map.set(itemId, { at, text });
-    };
-    activeSales.forEach((s) =>
-      consider(s.itemId, s.createdAt, `продажа −${formatNumber(s.quantity)} · ${s.createdByName}`)
-    );
-    activeProduction.forEach((p) =>
-      consider(p.itemId, p.createdAt, `производство +${formatNumber(p.quantity)} · ${p.createdByName}`)
-    );
-    return map;
-  }, [activeSales, activeProduction]);
+  }, [stockItems]);
 
   return (
     <div className="space-y-5">
-      <PageTitle title="Склад" subtitle={`${activeItems.length} позиций`} />
+      <PageTitle title="Склад" subtitle={`${stockItems.length} позиций на складе`} />
 
       <div className="grid grid-cols-3 gap-3">
         <Summary label="В наличии" value={counts.ok} dot="bg-emerald-500" text="text-emerald-600" />
@@ -43,32 +25,22 @@ export function StockPage() {
         <Summary label="Заканчивается" value={counts.out} dot="bg-red-500" text="text-red-600" />
       </div>
 
-      {activeItems.length === 0 && (
+      {stockItems.length === 0 && (
         <Card className="p-5 text-center text-sm text-slate-400">
-          Склад пуст. Добавьте позиции на странице «Товары».
+          Нет позиций на складе. Добавьте товар или материал с галочкой «Учитывать на складе».
         </Card>
       )}
 
       <div className="grid gap-3 sm:grid-cols-2">
-        {activeItems.map((item) => (
-          <StockCard key={item.id} item={item} lastActivity={lastActivityByItem.get(item.id)?.text} />
+        {stockItems.map((item) => (
+          <StockCard key={item.id} item={item} movements={movementsForItem(item.id, 2)} />
         ))}
       </div>
     </div>
   );
 }
 
-function Summary({
-  label,
-  value,
-  dot,
-  text,
-}: {
-  label: string;
-  value: number;
-  dot: string;
-  text: string;
-}) {
+function Summary({ label, value, dot, text }: { label: string; value: number; dot: string; text: string }) {
   return (
     <Card className="p-3 text-center">
       <div className="flex items-center justify-center gap-1.5">

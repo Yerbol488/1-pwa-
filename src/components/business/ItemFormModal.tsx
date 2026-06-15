@@ -3,11 +3,11 @@ import { Modal } from "../ui/Modal";
 import { Button } from "../ui/Button";
 import { Field } from "../ui/Field";
 import { cn } from "../../lib/format";
-import { iconOrder, itemIcons, itemIconTints } from "../../data/icons";
-import type { AddItemInput } from "../../context/AppDataContext";
-import type { ItemIconKey, ItemType, ItemTypeLabel } from "../../types";
+import { iconOrder, iconPresets, itemIcons, itemIconTints } from "../../data/icons";
+import { TYPE_OPTIONS, defaultFlagsForType } from "../../lib/items";
+import type { ItemInput } from "../../context/AppDataContext";
+import type { ItemIconKey, ItemType } from "../../types";
 
-/** Plain editable shape used by the form (numbers kept as strings while typing). */
 export interface ItemFormSeed {
   name: string;
   type: ItemType;
@@ -18,14 +18,11 @@ export interface ItemFormSeed {
   icon: ItemIconKey;
   comment: string;
   attributes: Array<{ key: string; value: string }>;
+  sellable: boolean;
+  purchasable: boolean;
+  stockTracked: boolean;
+  consumableInProduction: boolean;
 }
-
-export const TYPE_OPTIONS: Array<{ type: ItemType; label: ItemTypeLabel }> = [
-  { type: "product", label: "Товар" },
-  { type: "material", label: "Материал" },
-  { type: "service", label: "Услуга" },
-  { type: "expense_category", label: "Расходная категория" },
-];
 
 export const emptySeed: ItemFormSeed = {
   name: "",
@@ -37,25 +34,32 @@ export const emptySeed: ItemFormSeed = {
   icon: "box",
   comment: "",
   attributes: [],
+  ...defaultFlagsForType("product"),
 };
 
-function labelForType(type: ItemType): ItemTypeLabel {
-  return TYPE_OPTIONS.find((o) => o.type === type)!.label;
-}
+const FLAG_LABELS: Array<{ key: keyof ItemFormSeed; label: string }> = [
+  { key: "sellable", label: "Можно продавать" },
+  { key: "purchasable", label: "Можно покупать" },
+  { key: "stockTracked", label: "Учитывать на складе" },
+  { key: "consumableInProduction", label: "Используется в производстве" },
+];
 
-interface ItemFormModalProps {
+export function ItemFormModal({
+  open,
+  title,
+  seed,
+  onClose,
+  onSubmit,
+}: {
   open: boolean;
   title: string;
   seed: ItemFormSeed;
   onClose: () => void;
-  onSubmit: (input: AddItemInput) => void;
-}
-
-export function ItemFormModal({ open, title, seed, onClose, onSubmit }: ItemFormModalProps) {
+  onSubmit: (input: ItemInput) => void;
+}) {
   const [form, setForm] = useState<ItemFormSeed>(seed);
   const [error, setError] = useState<string | null>(null);
 
-  // Re-seed whenever the modal opens (or the chosen template changes).
   useEffect(() => {
     if (open) {
       setForm(seed);
@@ -66,14 +70,15 @@ export function ItemFormModal({ open, title, seed, onClose, onSubmit }: ItemForm
   const set = <K extends keyof ItemFormSeed>(key: K, value: ItemFormSeed[K]) =>
     setForm((f) => ({ ...f, [key]: value }));
 
+  // Picking a type applies its sensible default flags (still editable).
+  function pickType(type: ItemType) {
+    setForm((f) => ({ ...f, type, ...defaultFlagsForType(type) }));
+  }
+
   const addAttr = () => set("attributes", [...form.attributes, { key: "", value: "" }]);
   const updateAttr = (i: number, field: "key" | "value", value: string) =>
-    set(
-      "attributes",
-      form.attributes.map((a, idx) => (idx === i ? { ...a, [field]: value } : a))
-    );
-  const removeAttr = (i: number) =>
-    set("attributes", form.attributes.filter((_, idx) => idx !== i));
+    set("attributes", form.attributes.map((a, idx) => (idx === i ? { ...a, [field]: value } : a)));
+  const removeAttr = (i: number) => set("attributes", form.attributes.filter((_, idx) => idx !== i));
 
   function handleSubmit() {
     if (!form.name.trim()) return setError("Введите название позиции.");
@@ -81,7 +86,6 @@ export function ItemFormModal({ open, title, seed, onClose, onSubmit }: ItemForm
     onSubmit({
       name: form.name,
       type: form.type,
-      typeLabel: labelForType(form.type),
       unit: form.unit,
       salePrice: Number(form.salePrice) || 0,
       purchasePrice: Number(form.purchasePrice) || 0,
@@ -89,6 +93,10 @@ export function ItemFormModal({ open, title, seed, onClose, onSubmit }: ItemForm
       icon: form.icon,
       comment: form.comment,
       attributes: form.attributes,
+      sellable: form.sellable,
+      purchasable: form.purchasable,
+      stockTracked: form.stockTracked,
+      consumableInProduction: form.consumableInProduction,
     });
   }
 
@@ -108,29 +116,37 @@ export function ItemFormModal({ open, title, seed, onClose, onSubmit }: ItemForm
         </div>
       }
     >
-      <div className="space-y-3">
+      <div className="space-y-4">
         <Field label="Название">
           <input
             className="form-input"
             value={form.name}
             onChange={(e) => set("name", e.target.value)}
-            placeholder="Например: Брусчатка"
+            placeholder="Например: Цемент"
           />
         </Field>
 
-        <Field label="Тип">
-          <select
-            className="form-input"
-            value={form.type}
-            onChange={(e) => set("type", e.target.value as ItemType)}
-          >
+        {/* Quick type select */}
+        <div>
+          <span className="mb-1.5 block text-sm font-medium text-slate-600">Быстрый выбор типа</span>
+          <div className="flex flex-wrap gap-2">
             {TYPE_OPTIONS.map((o) => (
-              <option key={o.type} value={o.type}>
+              <button
+                key={o.type}
+                type="button"
+                onClick={() => pickType(o.type)}
+                className={cn(
+                  "rounded-xl border px-3 py-2 text-sm font-medium transition",
+                  form.type === o.type
+                    ? "border-brand-500 bg-blue-50 text-brand-700"
+                    : "border-slate-200 bg-white text-slate-600"
+                )}
+              >
                 {o.label}
-              </option>
+              </button>
             ))}
-          </select>
-        </Field>
+          </div>
+        </div>
 
         <div className="grid grid-cols-2 gap-3">
           <Field label="Ед. измерения">
@@ -175,15 +191,17 @@ export function ItemFormModal({ open, title, seed, onClose, onSubmit }: ItemForm
 
         {/* Icon picker */}
         <div>
-          <span className="mb-1.5 block text-sm font-medium text-slate-600">Иконка</span>
+          <span className="mb-1.5 block text-sm font-medium text-slate-600">Выберите иконку</span>
           <div className="flex flex-wrap gap-2">
             {iconOrder.map((key) => {
               const Icon = itemIcons[key];
               const active = form.icon === key;
+              const label = iconPresets.find((p) => p.key === key)?.label;
               return (
                 <button
                   key={key}
                   type="button"
+                  title={label}
                   onClick={() => set("icon", key)}
                   className={cn(
                     "flex h-10 w-10 items-center justify-center rounded-xl border transition",
@@ -195,6 +213,27 @@ export function ItemFormModal({ open, title, seed, onClose, onSubmit }: ItemForm
                 </button>
               );
             })}
+          </div>
+        </div>
+
+        {/* Accounting behavior flags */}
+        <div>
+          <span className="mb-1.5 block text-sm font-medium text-slate-600">Настройки учета</span>
+          <div className="space-y-2">
+            {FLAG_LABELS.map(({ key, label }) => (
+              <label
+                key={key}
+                className="flex cursor-pointer items-center justify-between rounded-xl bg-slate-50 px-3 py-2.5"
+              >
+                <span className="text-sm font-medium text-slate-700">{label}</span>
+                <input
+                  type="checkbox"
+                  checked={form[key] as boolean}
+                  onChange={(e) => set(key, e.target.checked as ItemFormSeed[typeof key])}
+                  className="h-5 w-5 rounded accent-brand-600"
+                />
+              </label>
+            ))}
           </div>
         </div>
 
@@ -216,7 +255,7 @@ export function ItemFormModal({ open, title, seed, onClose, onSubmit }: ItemForm
             </button>
           </div>
           {form.attributes.length === 0 && (
-            <p className="text-xs text-slate-400">Например: Размер = 600×300×200, Плотность = D500</p>
+            <p className="text-xs text-slate-400">Например: Размер = 600×300×200, Марка = М500</p>
           )}
           <div className="space-y-2">
             {form.attributes.map((a, i) => (
