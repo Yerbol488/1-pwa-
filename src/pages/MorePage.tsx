@@ -3,10 +3,11 @@ import { Card, CardBody } from "../components/ui/Card";
 import { PageTitle } from "../components/ui/PageTitle";
 import { useAppData } from "../context/AppDataContext";
 import {
-  Wallet,
-  Factory,
   Package,
+  Truck,
+  Users,
   ScrollText,
+  BarChart3,
   Settings,
   Info,
   ChevronRight,
@@ -22,11 +23,12 @@ interface MenuLink {
 }
 
 const links: MenuLink[] = [
-  { to: "/expenses", label: "Расходы", description: "Учет затрат", icon: Wallet, tint: "bg-red-50 text-red-600" },
-  { to: "/production", label: "Производство", description: "Выпуск продукции", icon: Factory, tint: "bg-blue-50 text-brand-600" },
-  { to: "/items", label: "Товары и материалы", description: "Каталог и цены", icon: Package, tint: "bg-emerald-50 text-emerald-600" },
+  { to: "/items", label: "Товары и материалы", description: "Каталог, цены, настройки учета", icon: Package, tint: "bg-blue-50 text-brand-600" },
+  { to: "/suppliers", label: "Поставщики", description: "WhatsApp, телефоны", icon: Truck, tint: "bg-cyan-50 text-cyan-600" },
+  { to: "/contacts", label: "Контакты / CRM", description: "Клиенты и статусы", icon: Users, tint: "bg-blue-50 text-brand-600" },
+  { to: "/reports", label: "Отчеты", description: "Аналитика по периодам", icon: BarChart3, tint: "bg-emerald-50 text-emerald-600" },
   { to: "/activity", label: "Журнал действий", description: "История операций", icon: ScrollText, tint: "bg-amber-50 text-amber-600" },
-  { to: "/settings", label: "Настройки компании", description: "Компания, сотрудники, сброс", icon: Settings, tint: "bg-slate-100 text-slate-600" },
+  { to: "/settings", label: "Настройки компании", description: "Компания, доступ, сброс", icon: Settings, tint: "bg-slate-100 text-slate-600" },
 ];
 
 export function MorePage() {
@@ -58,7 +60,7 @@ export function MorePage() {
           <div className="flex gap-3">
             <Info className="h-5 w-5 shrink-0 text-amber-600" />
             <p className="text-sm text-amber-800">
-              Локальный режим: данные хранятся только на этом устройстве. Общий доступ появится после подключения синхронизации.
+              Локальный режим: данные хранятся только на этом устройстве.
             </p>
           </div>
         </CardBody>

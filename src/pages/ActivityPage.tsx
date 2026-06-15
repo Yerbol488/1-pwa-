@@ -6,15 +6,15 @@ import { useAppData } from "../context/AppDataContext";
 import { cn } from "../lib/format";
 import type { EntityType } from "../types";
 
-type Filter = "all" | "sale" | "expense" | "production" | "item" | "system";
+type Filter = "all" | "sales" | "expenses" | "production" | "items" | "system";
 
 const filters: Array<{ key: Filter; label: string; entities: EntityType[] }> = [
   { key: "all", label: "Все", entities: [] },
-  { key: "sale", label: "Продажи", entities: ["sale"] },
-  { key: "expense", label: "Расходы", entities: ["expense"] },
+  { key: "sales", label: "Продажи", entities: ["sale"] },
+  { key: "expenses", label: "Расходы", entities: ["stock_purchase", "one_off_expense", "fixed_expense"] },
   { key: "production", label: "Производство", entities: ["production"] },
-  { key: "item", label: "Товары", entities: ["item"] },
-  { key: "system", label: "Система", entities: ["company", "system"] },
+  { key: "items", label: "Товары", entities: ["item"] },
+  { key: "system", label: "Система", entities: ["company", "system", "supplier", "client"] },
 ];
 
 export function ActivityPage() {
@@ -31,7 +31,6 @@ export function ActivityPage() {
     <div className="space-y-5">
       <PageTitle title="Журнал" subtitle="История всех действий" />
 
-      {/* Filters */}
       <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 no-scrollbar">
         {filters.map((f) => (
           <button

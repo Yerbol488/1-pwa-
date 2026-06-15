@@ -1,7 +1,6 @@
 import { CheckCircle2 } from "lucide-react";
 import { useAppData } from "../../context/AppDataContext";
 
-/** Bottom feedback toast driven by AppDataContext.feedback. */
 export function Toast() {
   const { feedback } = useAppData();
   if (!feedback) return null;

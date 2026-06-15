@@ -2,14 +2,15 @@ import { useState, type FormEvent } from "react";
 import { useAppData } from "../context/AppDataContext";
 import { Button } from "../components/ui/Button";
 import { Field } from "../components/ui/Field";
-import { Boxes, Building2, User, ShieldCheck } from "lucide-react";
+import { AmbientBackground } from "../components/ui/AmbientBackground";
+import { Boxes, Building2, User, Lock, ShieldCheck } from "lucide-react";
 
-// First-run screen. Shown whenever there is no current company. The main app
-// layout and bottom navigation are NOT rendered until this completes.
 export function CompanySetupPage() {
   const { createCompany } = useAppData();
   const [companyName, setCompanyName] = useState("");
   const [userName, setUserName] = useState("");
+  const [pin, setPin] = useState("");
+  const [pin2, setPin2] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   function handleSubmit(e: FormEvent) {
@@ -18,12 +19,21 @@ export function CompanySetupPage() {
       setError("Заполните название компании и ваше имя.");
       return;
     }
+    if (pin.trim() && pin.trim().length < 4) {
+      setError("PIN-код должен быть не короче 4 символов.");
+      return;
+    }
+    if (pin.trim() !== pin2.trim()) {
+      setError("PIN-коды не совпадают.");
+      return;
+    }
     setError(null);
-    createCompany(companyName, userName);
+    createCompany(companyName, userName, pin.trim() || undefined);
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-slate-100 to-blue-50 px-5 py-10">
+    <div className="relative flex min-h-screen flex-col items-center justify-center px-5 py-10">
+      <AmbientBackground />
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-600 shadow-soft">
@@ -58,6 +68,33 @@ export function CompanySetupPage() {
                 />
               </div>
             </Field>
+
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="PIN-код">
+                <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 focus-within:border-brand-500 focus-within:bg-white">
+                  <Lock className="h-5 w-5 text-slate-400" />
+                  <input
+                    type="password"
+                    inputMode="numeric"
+                    value={pin}
+                    onChange={(e) => setPin(e.target.value)}
+                    className="h-12 w-full bg-transparent text-sm text-slate-900 outline-none"
+                    placeholder="••••"
+                  />
+                </div>
+              </Field>
+              <Field label="Повтор PIN">
+                <input
+                  type="password"
+                  inputMode="numeric"
+                  value={pin2}
+                  onChange={(e) => setPin2(e.target.value)}
+                  className="form-input"
+                  placeholder="••••"
+                />
+              </Field>
+            </div>
+            <p className="text-xs text-slate-400">PIN можно не указывать. Его можно добавить позже в настройках.</p>
           </div>
 
           {error && <p className="mt-3 text-sm font-medium text-red-600">{error}</p>}
