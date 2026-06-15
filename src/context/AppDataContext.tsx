@@ -30,7 +30,8 @@ import type {
   ItemType,
   Membership,
   OneOffExpense,
-  PaymentType,
+  PaymentMethod,
+  PaymentStatus,
   Production,
   Role,
   Sale,
@@ -88,9 +89,14 @@ export interface AddSaleInput {
   itemId: string;
   quantity: number;
   price: number;
-  paymentType: PaymentType;
   comment: string;
   priceOverrideReason?: string;
+  paymentStatus: PaymentStatus;
+  paymentMethod: PaymentMethod;
+  paidAmount: number;
+  customerName?: string;
+  customerContactId?: string;
+  paymentComment?: string;
 }
 
 export interface AddStockPurchaseInput {
@@ -150,6 +156,22 @@ export interface ClientInput {
 export interface ActionResult {
   ok: boolean;
   error?: string;
+}
+
+/** Russian label for a payment method. */
+export function methodLabel(m: PaymentMethod): string {
+  switch (m) {
+    case "cash":
+      return "Наличные";
+    case "kaspi":
+      return "Kaspi / перевод";
+    case "card":
+      return "Карта";
+    case "other":
+      return "Другое";
+    case "none":
+      return "Без оплаты";
+  }
 }
 
 interface AppDataContextValue {
@@ -626,6 +648,22 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       return { ok: false, error: `Недостаточно на складе: доступно ${formatNumber(item.stockQuantity)} ${item.unit}.` };
     }
     const overridden = !!input.priceOverrideReason && input.price !== item.salePrice;
+    const total = input.quantity * input.price;
+    // Resolve payment / debt amounts from the chosen status.
+    let paidAmount = 0;
+    let paymentMethod = input.paymentMethod;
+    if (input.paymentStatus === "paid") {
+      paidAmount = total;
+    } else if (input.paymentStatus === "partial") {
+      paidAmount = Math.min(Math.max(input.paidAmount, 0), total);
+      if (paidAmount <= 0 || paidAmount >= total) {
+        return { ok: false, error: "Для частичной оплаты введите сумму больше 0 и меньше итога." };
+      }
+    } else {
+      paidAmount = 0;
+      paymentMethod = "none";
+    }
+    const debtAmount = total - paidAmount;
     const sale: Sale = {
       id: uid("sal"),
       businessId: currentBusinessId!,
@@ -633,8 +671,14 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       itemName: item.name,
       quantity: input.quantity,
       price: input.price,
-      total: input.quantity * input.price,
-      paymentType: input.paymentType,
+      total,
+      paymentStatus: input.paymentStatus,
+      paymentMethod,
+      paidAmount,
+      debtAmount,
+      customerName: input.customerName?.trim() || undefined,
+      customerContactId: input.customerContactId || undefined,
+      paymentComment: input.paymentComment?.trim() || undefined,
       comment: input.comment.trim(),
       originalUnitPrice: overridden ? item.salePrice : undefined,
       priceOverrideReason: overridden ? input.priceOverrideReason : undefined,
@@ -649,11 +693,17 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       adjustStock(item.id, -input.quantity);
       pushMovement(item, "sale_out", -input.quantity, "sale", sale.id);
     }
+    const payText =
+      sale.paymentStatus === "paid"
+        ? `Оплата: ${methodLabel(sale.paymentMethod)}.`
+        : sale.paymentStatus === "partial"
+          ? `Частично оплачено: ${formatTenge(sale.paidAmount)}, долг: ${formatTenge(sale.debtAmount)}.`
+          : "В долг.";
     pushActivity(
       "sale_created",
       "sale",
       sale.id,
-      `${currentUser!.name} продал ${item.name} ${formatNumber(input.quantity)} ${item.unit} — ${formatTenge(sale.total)}`
+      `${currentUser!.name} продал ${item.name} ${formatNumber(input.quantity)} ${item.unit} — ${formatTenge(total)}. ${payText}`
     );
     if (overridden) {
       pushActivity(

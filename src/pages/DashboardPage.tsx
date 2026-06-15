@@ -9,6 +9,7 @@ import { itemIcons, itemIconTints } from "../data/icons";
 import {
   HardDrive,
   TrendingUp,
+  HandCoins,
   TrendingDown,
   Wallet,
   ShoppingCart,
@@ -20,6 +21,7 @@ import {
 export function DashboardPage() {
   const {
     currentBusiness,
+    activeItems,
     activeSales,
     activeStockPurchases,
     activeOneOff,
@@ -28,12 +30,17 @@ export function DashboardPage() {
     businessActivity,
   } = useAppData();
 
-  const revenueToday = activeSales.filter((s) => isToday(s.createdAt)).reduce((sum, s) => sum + s.total, 0);
+  const todaySales = activeSales.filter((s) => isToday(s.createdAt));
+  const soldToday = todaySales.reduce((sum, s) => sum + s.total, 0);
+  const receivedToday = todaySales.reduce((sum, s) => sum + s.paidAmount, 0);
+  const customerDebt = activeSales.reduce((sum, s) => sum + s.debtAmount, 0);
   const expensesToday =
     activeStockPurchases.filter((p) => isToday(p.createdAt)).reduce((s, p) => s + p.totalAmount, 0) +
     activeOneOff.filter((o) => isToday(o.createdAt)).reduce((s, o) => s + o.amount + o.deliveryCost, 0) +
     activeFixed.filter((f) => isToday(f.createdAt)).reduce((s, f) => s + f.amount, 0);
-  const profitToday = revenueToday - expensesToday;
+
+  const isEmpty =
+    activeItems.length === 0 && activeSales.length === 0 && activeStockPurchases.length === 0 && activeOneOff.length === 0 && activeFixed.length === 0;
 
   const stockPreview = stockItems.slice(0, 3);
   const recent = businessActivity.slice(0, 4);
@@ -49,18 +56,25 @@ export function DashboardPage() {
       </Card>
 
       <div className="grid grid-cols-2 gap-3">
-        <StatCard label="Выручка сегодня" value={formatTenge(revenueToday)} accent="blue" icon={<TrendingUp className="h-5 w-5" />} />
+        <StatCard label="Продано сегодня" value={formatTenge(soldToday)} accent="blue" icon={<TrendingUp className="h-5 w-5" />} />
+        <StatCard label="Получено сегодня" value={formatTenge(receivedToday)} accent="green" icon={<HandCoins className="h-5 w-5" />} />
         <StatCard label="Расходы сегодня" value={formatTenge(expensesToday)} accent="red" icon={<TrendingDown className="h-5 w-5" />} />
-        <div className="col-span-2">
-          <StatCard
-            label="Прибыль сегодня"
-            value={formatTenge(profitToday)}
-            accent={profitToday < 0 ? "red" : "green"}
-            icon={<Wallet className="h-5 w-5" />}
-            hint="Выручка минус все расходы за сегодня · Локально сохранено"
-          />
-        </div>
+        <StatCard
+          label="Долг клиентов"
+          value={formatTenge(customerDebt)}
+          accent={customerDebt > 0 ? "red" : "slate"}
+          icon={<Wallet className="h-5 w-5" />}
+        />
       </div>
+
+      {isEmpty && (
+        <Card className="p-6 text-center">
+          <h2 className="text-lg font-extrabold text-slate-900">Пока нет данных</h2>
+          <p className="mx-auto mt-1 max-w-xs text-sm text-slate-500">
+            Добавьте первую позицию, продажу или расход.
+          </p>
+        </Card>
+      )}
 
       <div className="grid grid-cols-4 gap-2">
         <QuickAction to="/sales" label="Продажа" tint="bg-emerald-600" icon={<ShoppingCart className="h-5 w-5" />} />

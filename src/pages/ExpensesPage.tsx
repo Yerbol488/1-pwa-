@@ -420,11 +420,14 @@ function StockPurchaseTab() {
 // --- Tab 2: one-off expenses ------------------------------------------------
 
 function OneOffTab() {
-  const { activeOneOff, allOneOff, addOneOffExpense, cancelOneOffExpense, addItem, role } = useAppData();
+  const { activeOneOff, allOneOff, addOneOffExpense, cancelOneOffExpense, addItem, activeSuppliers, role } = useAppData();
 
   const [title, setTitle] = useState("");
   const [amount, setAmount] = useState("");
+  const [quantity, setQuantity] = useState("");
+  const [unit, setUnit] = useState("");
   const [delivery, setDelivery] = useState("");
+  const [supplierId, setSupplierId] = useState("");
   const [comment, setComment] = useState("");
   const [error, setError] = useState<string | null>(null);
 
@@ -462,12 +465,23 @@ function OneOffTab() {
     if (!title.trim()) return setError("Введите название.");
     const amt = Number(amount);
     if (!amt || amt <= 0) return setError("Введите сумму.");
-    const res = addOneOffExpense({ title, amount: amt, deliveryCost: Number(delivery) || 0, comment });
+    const res = addOneOffExpense({
+      title,
+      amount: amt,
+      quantity: Number(quantity) || undefined,
+      unit: unit.trim() || undefined,
+      deliveryCost: Number(delivery) || 0,
+      supplierId: supplierId || undefined,
+      comment,
+    });
     if (!res.ok) return setError(res.error ?? "Не удалось сохранить расход.");
     setError(null);
     setTitle("");
     setAmount("");
+    setQuantity("");
+    setUnit("");
     setDelivery("");
+    setSupplierId("");
     setComment("");
   }
 
@@ -497,6 +511,26 @@ function OneOffTab() {
                 <input className="form-input" inputMode="numeric" value={delivery} onChange={(e) => setDelivery(e.target.value)} placeholder="0" />
               </Field>
             </div>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Количество">
+                <input className="form-input" inputMode="numeric" value={quantity} onChange={(e) => setQuantity(e.target.value)} placeholder="Необязательно" />
+              </Field>
+              <Field label="Ед. измерения">
+                <input className="form-input" value={unit} onChange={(e) => setUnit(e.target.value)} placeholder="г, шт, л" />
+              </Field>
+            </div>
+            {activeSuppliers.length > 0 && (
+              <Field label="Поставщик">
+                <select className="form-input" value={supplierId} onChange={(e) => setSupplierId(e.target.value)}>
+                  <option value="">Без поставщика</option>
+                  {activeSuppliers.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            )}
             <Field label="Комментарий">
               <input className="form-input" value={comment} onChange={(e) => setComment(e.target.value)} placeholder="Необязательно" />
             </Field>
@@ -531,12 +565,26 @@ function OneOffTab() {
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-base font-bold text-slate-900">{o.title}</p>
-                <p className="text-sm text-slate-400">{o.createdByName} · {formatDateTime(o.createdAt)}{o.comment && ` · ${o.comment}`}</p>
+                {(o.quantity || o.supplierName) && (
+                  <p className="text-sm text-slate-500">
+                    {o.quantity ? `${formatNumber(o.quantity)} ${o.unit ?? ""}`.trim() : ""}
+                    {o.quantity && o.supplierName ? " · " : ""}
+                    {o.supplierName ? `Поставщик: ${o.supplierName}` : ""}
+                  </p>
+                )}
+                <p className="text-sm text-slate-400">
+                  {o.createdByName} · {formatDateTime(o.createdAt)}
+                  {o.deliveryCost > 0 && ` · доставка ${formatTenge(o.deliveryCost)}`}
+                  {o.comment && ` · ${o.comment}`}
+                </p>
               </div>
               <p className={"text-lg font-extrabold tabular " + (deleted ? "text-slate-400 line-through" : "text-red-600")}>
                 −{formatTenge(o.amount + o.deliveryCost)}
               </p>
             </div>
+            <p className="mt-1 inline-flex rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-500">
+              Не на складе
+            </p>
             {deleted && (
               <div className="mt-2 flex flex-wrap items-center gap-2">
                 <Badge tone="red">Отменено</Badge>

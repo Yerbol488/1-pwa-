@@ -3,18 +3,19 @@ import { Card, CardHeader } from "../components/ui/Card";
 import { StatCard } from "../components/ui/StatCard";
 import { PageTitle } from "../components/ui/PageTitle";
 import { useAppData } from "../context/AppDataContext";
-import { cn, formatNumber, formatTenge } from "../lib/format";
+import { cn, formatNumber, formatTenge, formatDateTime } from "../lib/format";
 import {
   PERIOD_OPTIONS,
   getPeriodRange,
   monthRange,
   filterByRange,
+  inRange,
   getSalesByTimeBucket,
   bestTimeBucket,
   type DateRange,
   type PeriodKey,
 } from "../lib/reports";
-import { TrendingUp, TrendingDown, Wallet, Clock } from "lucide-react";
+import { TrendingUp, TrendingDown, Wallet, HandCoins, Clock } from "lucide-react";
 
 type Mode = PeriodKey | "pick_month" | "pick_range";
 
@@ -43,16 +44,23 @@ export function ReportsPage() {
   const sales = useMemo(() => filterByRange(activeSales, range), [activeSales, range]);
   const purchases = useMemo(() => filterByRange(activeStockPurchases, range), [activeStockPurchases, range]);
   const oneOff = useMemo(() => filterByRange(activeOneOff, range), [activeOneOff, range]);
-  const fixed = useMemo(() => filterByRange(activeFixed, range), [activeFixed, range]);
+  // Fixed expenses are reported by the period they apply to (periodDate), not createdAt.
+  const fixed = useMemo(
+    () => activeFixed.filter((f) => inRange(`${f.periodDate}T12:00:00`, range)),
+    [activeFixed, range]
+  );
   const productionRecs = useMemo(() => filterByRange(activeProduction, range), [activeProduction, range]);
 
-  const revenue = sales.reduce((s, x) => s + x.total, 0);
+  const sold = sales.reduce((s, x) => s + x.total, 0);
+  const received = sales.reduce((s, x) => s + x.paidAmount, 0);
+  const customerDebt = sales.reduce((s, x) => s + x.debtAmount, 0);
   const stockExp = purchases.reduce((s, x) => s + x.totalAmount, 0);
   const oneOffExp = oneOff.reduce((s, x) => s + x.amount + x.deliveryCost, 0);
   const fixedExp = fixed.reduce((s, x) => s + x.amount, 0);
   const totalExp = stockExp + oneOffExp + fixedExp;
-  const profit = revenue - totalExp;
+  const profit = sold - totalExp;
   const productionQty = productionRecs.reduce((s, x) => s + x.quantity, 0);
+  const debtSales = useMemo(() => sales.filter((s) => s.debtAmount > 0), [sales]);
 
   const groups = [
     { label: "Покупки на склад", value: stockExp, color: "bg-indigo-500" },
@@ -127,9 +135,11 @@ export function ReportsPage() {
       )}
 
       <div className="grid grid-cols-2 gap-3">
-        <StatCard label="Выручка" value={formatTenge(revenue)} accent="blue" icon={<TrendingUp className="h-5 w-5" />} />
+        <StatCard label="Продано" value={formatTenge(sold)} accent="blue" icon={<TrendingUp className="h-5 w-5" />} />
+        <StatCard label="Получено" value={formatTenge(received)} accent="green" icon={<HandCoins className="h-5 w-5" />} />
+        <StatCard label="Долг клиентов" value={formatTenge(customerDebt)} accent="red" icon={<Wallet className="h-5 w-5" />} />
         <StatCard label="Расходы" value={formatTenge(totalExp)} accent="red" icon={<TrendingDown className="h-5 w-5" />} />
-        <StatCard label="Прибыль" value={formatTenge(profit)} accent={profit < 0 ? "red" : "green"} icon={<Wallet className="h-5 w-5" />} />
+        <StatCard label="Прибыль" value={formatTenge(profit)} accent={profit < 0 ? "red" : "green"} icon={<Wallet className="h-5 w-5" />} hint="Продано минус расходы" />
         <StatCard
           label="Продаж"
           value={formatNumber(sales.length)}
@@ -138,14 +148,15 @@ export function ReportsPage() {
         />
       </div>
 
-      {/* Revenue vs expenses bar */}
+      {/* Sold / received / expenses bar */}
       <Card>
         <CardHeader>
-          <h2 className="text-base font-bold text-slate-900">Выручка и расходы</h2>
+          <h2 className="text-base font-bold text-slate-900">Деньги за период</h2>
         </CardHeader>
         <div className="space-y-3 px-4 pb-5 pt-1">
-          <Bar label="Выручка" value={revenue} max={Math.max(1, revenue, totalExp)} color="bg-brand-500" />
-          <Bar label="Расходы" value={totalExp} max={Math.max(1, revenue, totalExp)} color="bg-red-400" />
+          <Bar label="Продано" value={sold} max={Math.max(1, sold, totalExp)} color="bg-brand-500" />
+          <Bar label="Получено" value={received} max={Math.max(1, sold, totalExp)} color="bg-emerald-500" />
+          <Bar label="Расходы" value={totalExp} max={Math.max(1, sold, totalExp)} color="bg-red-400" />
         </div>
       </Card>
 
@@ -211,6 +222,35 @@ export function ReportsPage() {
           {topItems.map(([name, qty]) => (
             <Bar key={name} label={name} value={qty} max={maxTop} color="bg-emerald-500" valueText={formatNumber(qty)} />
           ))}
+        </div>
+      </Card>
+
+      {/* Customer debts */}
+      <Card>
+        <CardHeader>
+          <h2 className="text-base font-bold text-slate-900">Долги клиентов</h2>
+          <span className="text-sm font-bold text-red-600 tabular">{formatTenge(customerDebt)}</span>
+        </CardHeader>
+        <div className="space-y-3 px-4 pb-4 pt-1">
+          {debtSales.length === 0 ? (
+            <p className="text-sm text-slate-400">Нет долгов за период.</p>
+          ) : (
+            debtSales.map((s) => (
+              <div key={s.id} className="rounded-xl bg-slate-50 p-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <p className="text-sm font-bold text-slate-900">{s.customerName ?? "Клиент не указан"}</p>
+                    <p className="text-xs text-slate-500">{s.itemName} · {formatDateTime(s.createdAt)}</p>
+                  </div>
+                  <p className="text-base font-extrabold text-red-600 tabular">{formatTenge(s.debtAmount)}</p>
+                </div>
+                <p className="mt-1 text-xs text-slate-400">
+                  Итого {formatTenge(s.total)} · оплачено {formatTenge(s.paidAmount)}
+                  {s.comment && ` · ${s.comment}`}
+                </p>
+              </div>
+            ))
+          )}
         </div>
       </Card>
 

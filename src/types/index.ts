@@ -121,6 +121,11 @@ export interface PriceOverrideFields {
 
 export type PaymentType = "Наличные" | "Карта" | "Перевод" | "В долг";
 
+/** Whether the customer paid fully, partially, or took goods on debt. */
+export type PaymentStatus = "paid" | "partial" | "debt";
+
+export type PaymentMethod = "cash" | "kaspi" | "card" | "other" | "none";
+
 export interface Sale extends SoftDeleteFields, PriceOverrideFields {
   id: string;
   businessId: string;
@@ -129,7 +134,14 @@ export interface Sale extends SoftDeleteFields, PriceOverrideFields {
   quantity: number;
   price: number; // actual unit price
   total: number;
-  paymentType: PaymentType;
+  // Payment / debt
+  paymentStatus: PaymentStatus;
+  paymentMethod: PaymentMethod;
+  paidAmount: number;
+  debtAmount: number;
+  customerName?: string;
+  customerContactId?: string;
+  paymentComment?: string;
   comment: string;
   createdByUserId: string;
   createdByName: string;

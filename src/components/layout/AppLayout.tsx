@@ -5,6 +5,7 @@ import { Toast } from "../ui/Toast";
 import { AmbientBackground } from "../ui/AmbientBackground";
 
 const titles: Record<string, string> = {
+  "/": "Главная",
   "/dashboard": "Главная",
   "/sales": "Продажи",
   "/expenses": "Расходы",

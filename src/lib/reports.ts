@@ -76,13 +76,14 @@ export interface TimeBucket {
 }
 
 export const TIME_BUCKETS: TimeBucket[] = [
+  { label: "00:00–08:00", startHour: 0, endHour: 8 },
   { label: "08:00–10:00", startHour: 8, endHour: 10 },
   { label: "10:00–12:00", startHour: 10, endHour: 12 },
   { label: "12:00–14:00", startHour: 12, endHour: 14 },
   { label: "14:00–16:00", startHour: 14, endHour: 16 },
   { label: "16:00–18:00", startHour: 16, endHour: 18 },
   { label: "18:00–20:00", startHour: 18, endHour: 20 },
-  { label: "20:00+", startHour: 20, endHour: 24 },
+  { label: "20:00–00:00", startHour: 20, endHour: 24 },
 ];
 
 export interface BucketResult {

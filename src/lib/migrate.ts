@@ -14,10 +14,12 @@ import {
 import { defaultFlagsForType } from "./items";
 import type {
   ConsumedMaterial,
+  FixedExpense,
   Item,
   ItemType,
   OneOffExpense,
   Production,
+  Sale,
   SoftDeleteFields,
 } from "../types";
 
@@ -93,6 +95,32 @@ export function runMigrations(): void {
     return { ...p, consumedMaterials: [] as ConsumedMaterial[] };
   });
   if (prodChanged) saveJSON(STORAGE_KEYS.production, migratedProduction);
+
+  // 4) Sales: add payment/debt fields (old sales treated as fully paid).
+  const sales = loadJSON<Sale[]>(STORAGE_KEYS.sales, []);
+  let salesChanged = false;
+  const migratedSales = sales.map((s) => {
+    if (typeof s.paymentStatus === "string" && typeof s.paidAmount === "number") return s;
+    salesChanged = true;
+    return {
+      ...s,
+      paymentStatus: "paid" as const,
+      paymentMethod: "other" as const,
+      paidAmount: s.total,
+      debtAmount: 0,
+    };
+  });
+  if (salesChanged) saveJSON(STORAGE_KEYS.sales, migratedSales);
+
+  // 5) Fixed expenses: ensure periodDate (fallback to the createdAt date).
+  const fixed = loadJSON<FixedExpense[]>(STORAGE_KEYS.fixedExpenses, []);
+  let fixedChanged = false;
+  const migratedFixed = fixed.map((f) => {
+    if (f.periodDate) return f;
+    fixedChanged = true;
+    return { ...f, periodDate: (f.createdAt || new Date().toISOString()).slice(0, 10) };
+  });
+  if (fixedChanged) saveJSON(STORAGE_KEYS.fixedExpenses, migratedFixed);
 
   saveString(STORAGE_KEYS.storageVersion, String(STORAGE_VERSION));
 }

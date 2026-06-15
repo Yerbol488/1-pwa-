@@ -17,7 +17,7 @@ import type {
   Supplier,
 } from "../types";
 
-export const STORAGE_VERSION = 4;
+export const STORAGE_VERSION = 5;
 
 export const STORAGE_KEYS = {
   businesses: "materialFlow.businesses",

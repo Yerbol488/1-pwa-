@@ -28,6 +28,7 @@ export function AppRoutes() {
   return (
     <Routes>
       <Route element={<AppLayout />}>
+        <Route path="/" element={<DashboardPage />} />
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/sales" element={<SalesPage />} />
         <Route path="/expenses" element={<ExpensesPage />} />
@@ -41,7 +42,7 @@ export function AppRoutes() {
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/more" element={<MorePage />} />
       </Route>
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }
